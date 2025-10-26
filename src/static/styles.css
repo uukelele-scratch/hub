@@ -72,14 +72,15 @@ a /*> button*/ {
 
 /* --- */
 
-button[settings] {
+.settings-btn {
     position: fixed;
     top: 1rem;
     right: 1rem;
     z-index: 101;
 }
 
-#overlayBackdrop {
+.overlay-backdrop {
+    position: fixed;
     background: rgba(0,0,0,0.6);
     position: absolute;
     height: 100vh;
@@ -93,13 +94,21 @@ button[settings] {
     justify-content: center;
 }
 
-#settingsModal {
-    height: 400px;
-    width: 600px;
+.settings-modal {
+    max-height: 90vh;
+    width: clamp(300px, 90%, 600px);
     z-index: 101;
 
-    background: rgba(255, 255, 255, 0.6);
-    backdrop-filter: blur(2px);
+    overflow-y: auto;
 
+    background: var(--pico-card-background-color);
     border-radius: var(--pico-border-radius);
+    box-shadow: var(--pico-card-box-shadow);
+
+    padding: 2rem;
+
+}
+
+.editor-toolbar * {
+  color: black;
 }

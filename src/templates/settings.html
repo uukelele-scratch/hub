@@ -1,0 +1,50 @@
+<button class="settings-btn" data-open="false">
+    {{ hy.icon("settings") }}
+</button>
+
+<div class="overlay-backdrop hidden">
+    <div class="settings-modal">
+        <form id="settingsForm">
+            <h3>Settings</h3>
+            <p>Configure your Hub instance.</p>
+            
+            <label for="repo_url">Hub Data Repo</label>
+            <input 
+                type="text" 
+                id="repo_url"
+                name="repo_url"
+                placeholder="username/repo" 
+                required>
+            <small>The username and repository name of the repository set up for Hub data syncing.</small>
+
+            <br>
+
+            <label for="master_password">Master Password</label>
+            <input 
+                type="password" 
+                id="master_password"
+                name="master_password"
+                placeholder=""
+                required>
+            <small>Used to encrypt and decrypt your data.</small>
+            
+            <br>
+
+            <label for="gh_token">GitHub Token</label>
+            <input 
+                type="password" 
+                id="gh_token"
+                name="gh_token"
+                placeholder="github_pat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                required>
+            <small>GitHub token for syncing data.</small>
+            
+            <br><br>
+
+            <button type="submit">
+                {{ hy.icon("save") }}
+                Save
+            </button>
+        </form>
+    </div>
+</div>
