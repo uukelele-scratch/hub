@@ -1,0 +1,105 @@
+:root {
+    --pico-border-radius: 0.75rem;
+}
+
+[data-theme=light],
+:root:not([data-theme=dark]),
+:host:not([data-theme=dark]) {
+  --pico-text-selection-color: rgba(69, 179, 157, 0.25);
+  --pico-primary: #45B39D;
+  --pico-primary-background: #45B39D;
+  --pico-primary-underline: rgba(69, 179, 157, 0.5);
+  --pico-primary-hover: #16A085;
+  --pico-primary-hover-background: #16A085;
+  --pico-primary-focus: rgba(69, 179, 157, 0.5);
+  --pico-primary-inverse: #fff;
+}
+
+@media only screen and (prefers-color-scheme: dark) {
+  :root:not([data-theme]),
+  :host:not([data-theme]) {
+    --pico-text-selection-color: rgba(46, 204, 113, 0.1875);
+    --pico-primary: #2ECC71;
+    --pico-primary-background: #2ECC71;
+    --pico-primary-underline: rgba(46, 204, 113, 0.5);
+    --pico-primary-hover: #58D68D;
+    --pico-primary-hover-background: #58D68D;
+    --pico-primary-focus: rgba(46, 204, 113, 0.375);
+    --pico-primary-inverse: #000;
+  }
+}
+
+[data-theme=dark] {
+  --pico-text-selection-color: rgba(46, 204, 113, 0.1875);
+  --pico-primary: #2ECC71;
+  --pico-primary-background: #2ECC71;
+  --pico-primary-underline: rgba(46, 204, 113, 0.5);
+  --pico-primary-hover: #58D68D;
+  --pico-primary-hover-background: #58D68D;
+  --pico-primary-focus: rgba(46, 204, 113, 0.375);
+  --pico-primary-inverse: #000;
+}
+
+html, body {
+  height: 100%;      /* make body full height */
+  margin: 0;         /* remove default margin */
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; /* ensures body fills viewport */
+}
+
+main {
+  flex: 1;           /* takes all remaining space */
+}
+
+footer {
+  padding: 1rem;
+  text-align: center;
+}
+
+a /*> button*/ {
+  text-decoration: none; /* remove underline for links wrapping buttons */
+  --pico-text-decoration: none;
+}
+
+.hidden {
+    display: none !important;
+}
+
+
+/* --- */
+
+button[settings] {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 101;
+}
+
+#overlayBackdrop {
+    background: rgba(0,0,0,0.6);
+    position: absolute;
+    height: 100vh;
+    width: 100vw;
+    top: 0;
+    left: 0;
+    z-index: 100;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#settingsModal {
+    height: 400px;
+    width: 600px;
+    z-index: 101;
+
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(2px);
+
+    border-radius: var(--pico-border-radius);
+}

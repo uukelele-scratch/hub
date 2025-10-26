@@ -1,0 +1,36 @@
+{% set meta_title = "Home" %}
+{% extends "base.html" %}
+{% block content %}
+
+<h1>Welcome to <span style="color: var(--pico-primary)">Hub</span>!</h1>
+<p>Hub has been deployed.</p>
+
+<p>What do you want to do?</p>
+
+<button settings data-open=false>{{ hy.icon("settings") }}</button>
+
+<div id="overlayBackdrop" class="hidden">
+    <div id="settingsModal">
+        <fieldset role="group">
+            <input type="text" placeholder=""
+        </fieldset>
+    </div>
+</div>
+
+<br><br>
+
+<fieldset role="group">
+    <input type="text" placeholder="Chat with AI">
+    <select style="width:10rem;">
+        <option>Example 1</option>
+        <option>Example 2</option>
+    </select>
+    <button disabled>{{ hy.icon("search") }}</button>
+</fieldset>
+<small style="text-align: right;">
+    Search is disabled for now as we work on Zeta.
+</small>
+
+<script src="/static/script.js"></script>
+
+{% endblock %}

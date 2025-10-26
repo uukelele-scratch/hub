@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {{ hy.css() }}
+    <link rel="stylesheet" href="/static/styles.css">
+
+    <!-- META-->
+    <title>Hub | {{ meta_title }}</title>
+    <meta name="description" content="{{ meta_description }}">
+    <meta name="author" content="uukelele-scratch, Gamma7113131">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="{{ url }}">
+    
+    <meta property="og:title" content="Hub | {{ meta_title }}">
+    <meta property="og:description" content="{{ meta_description }}">
+    <meta property="og:image" content="{{ meta_image }}">
+    <meta property="og:url" content="{{ url }}">
+    <meta property="og:type" content="website">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Hub | {{ meta_title }}">
+    <meta name="twitter:description" content="{{ meta_description }}">
+    <meta name="twitter:image" content="{{ meta_image }}">
+
+    <script src="https://cdn.jsdelivr.net/npm/nunjucks/browser/nunjucks.min.js"></script>
+    <script>nunjucks.configure({ autoescape: true });</script>
+
+</head>
+<body>
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <small>
+        <p>© 2025 uukelele-scratch</p>
+        </small>
+    </footer>
+</body>
+</html>
