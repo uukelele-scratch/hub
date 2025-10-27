@@ -198,13 +198,40 @@ document.addEventListener('hy:connected', async()=>{
     });
 
     mde.codemirror.on("change", () => {
-        
+        // ... autosave?
     })
 
-    window.data = data;
+    marked.setOptions({
+        breaks: true,
+    })
+
+    $('#messages').innerHTML = nunjucks.renderString(`
+        {% for message in messages %}
+            <div class="message {{ message.role }}" data-id="{{ message.id }}">{{ DOMPurify.sanitize(marked.parse(escapeHTML(message.content | safe))) | safe }}</div>
+        {% endfor %} 
+    `, { messages: data.conversations, marked, escapeHTML, DOMPurify });
+    $('#messages').scrollTop = $('#messages').scrollHeight;
+
+    $('#chatForm').addEventListener('submit', async e => {
+        e.preventDefault();
+
+        if (!$('#chatForm input').value) return;
+
+        e.submitter.ariaBusy = true;
+
+        data.conversations.push({
+            role: 'user',
+            content: $('#chatForm input').value,
+            id: crypto.randomUUID(),
+            sources: [],
+        })
+
+        const res = await portal.chat(data.conversations.map(msg => ({ role: msg.role, content: msg.content })));
+        
+    })
 })
 
-$('#settingsForm').addEventListener('submit', async e=>{
+$('#settingsForm').addEventListener('submit', async e => {
     e.preventDefault();
 
     e.submitter.ariaBusy = true;

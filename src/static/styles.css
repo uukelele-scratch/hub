@@ -139,3 +139,60 @@ button[save] {
   border-bottom-left-radius: 0 !important;
   border-bottom-right-radius: 0 !important;
 }
+
+#chat {
+  height: 75vh;
+
+  border-radius:  var(--pico-border-radius);
+  box-shadow: var(--pico-card-box-shadow);
+}
+
+#chat #messages {
+  height: 91.5%;
+  padding: 1rem;
+
+  overflow: hidden auto;
+}
+
+#chat #bottom small {
+  margin-left: 1rem;
+}
+
+.message {
+  margin: 1rem;
+
+  border-radius: var(--pico-border-radius);
+  box-shadow: var(--pico-card-box-shadow);
+
+  padding: 1rem;
+
+  width: fit-content;
+  min-width: 20%;
+  max-width: 100%;
+
+  transition: background-color 0.3s ease;
+}
+
+.message p {
+  margin-bottom: 0;
+}
+
+.user {
+  background-color: var(--pico-modal-overlay-background-color);
+
+  margin-left: auto;
+}
+
+/*.user:hover {
+  background-color: var(--pico-background-color);
+}*/
+
+.assistant {
+  background-color: var(--pico-background-color);
+
+  margin-right: auto;
+}
+
+/*.assistant:hover {
+  background-color: var(--pico-modal-overlay-background-color);
+}*/
