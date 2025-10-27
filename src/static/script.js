@@ -201,10 +201,7 @@ document.addEventListener('hy:connected', async()=>{
         
     })
 
-    window.CUSTOMTEMP = (newdata) => {
-        Object.assign(data, newdata);
-        saveVault();
-    }
+    window.data = data;
 })
 
 $('#settingsForm').addEventListener('submit', async e=>{
