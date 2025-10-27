@@ -126,7 +126,7 @@ document.addEventListener('hy:connected', async()=>{
         try {
             const encryptedData = await encryptJSON(data);
             await portal.write('vault.enc', encryptedData);
-            calendar.refreshEvents();
+            calendar.render();
         } catch (e) {
             console.error(e)
         }
@@ -159,7 +159,6 @@ document.addEventListener('hy:connected', async()=>{
             );
         },
         dateClick: async info => {
-            console.log(info);
             window.selectedDate = info.date;
             const note = getSelectedNote();
             if (note)
