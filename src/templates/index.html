@@ -14,7 +14,15 @@
 
 {% include "settings.html" %}
 
-<br><br>
+<div id="group">
+    <div id="calendar"></div>
+    <div notes-container>
+        <textarea id="notes"></textarea>
+        <button save>
+            {{ hy.icon("Save") }} Save
+        </button>
+    </div>
+</div>
 
 <fieldset role="group">
     <input type="text" placeholder="Chat with AI">
@@ -27,10 +35,6 @@
 <small style="text-align: right;">
     Chat is disabled for now as we work on Hub.
 </small>
-
-<div id="calendar"></div>
-
-<textarea id="notes"></textarea>
 
 <script type="module" src="/static/script.js"></script>
 

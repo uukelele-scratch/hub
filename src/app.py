@@ -74,6 +74,8 @@ class Hub:
             [git, 'push']
         ]: print(sp.run(cmd, capture_output=True, text=True, check=True).stdout)
 
+        return 'DONE'
+
 hub = Hub()
 
 @expose

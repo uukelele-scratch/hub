@@ -112,3 +112,30 @@ a /*> button*/ {
 .editor-toolbar * {
   color: black;
 }
+
+#group {
+  display: flex;
+
+  gap: 1rem;
+
+  justify-content: center;
+  align-items: center;
+
+  margin: 1rem auto;
+}
+
+.fc-scroller * {
+  overflow: hidden !important;
+  margin-bottom: 0 !important;
+}
+
+button[save] {
+  width: 100%;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.CodeMirror {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
