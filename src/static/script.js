@@ -200,6 +200,11 @@ document.addEventListener('hy:connected', async()=>{
     mde.codemirror.on("change", () => {
         
     })
+
+    window.CUSTOMTEMP = (newdata) => {
+        Object.assign(data, newdata);
+        saveVault();
+    }
 })
 
 $('#settingsForm').addEventListener('submit', async e=>{
