@@ -4,6 +4,7 @@ import json
 import os
 import subprocess as sp
 from datetime import datetime
+from base64 import a85decode, a85encode
 
 app = App(__name__)
 
@@ -56,8 +57,11 @@ class Hub:
    
     def read(self, fp):
         self.clone()
-        with open(os.path.join(repo_path, fp), 'rb') as f:
-            return f.read()
+        try:
+            with open(os.path.join(repo_path, fp), 'rb') as f:
+                return f.read()
+        except FileNotFoundError:
+            open(os.path.join(repo_path, fp), 'x').close()
         
     def write(self, fp, data):
         self.clone()
@@ -65,10 +69,10 @@ class Hub:
             f.write(data)
 
         for cmd in [
-            [git, 'add', '.']
+            [git, 'add', '.'],
             [git, 'commit', '-m', f'"sync-{datetime.now()}"'],
             [git, 'push']
-        ]: sp.run(cmd, capture_output=True, text=True, check=True)
+        ]: print(sp.run(cmd, capture_output=True, text=True, check=True).stdout)
 
 hub = Hub()
 
@@ -86,11 +90,11 @@ def clone():
 @expose   
 def read(fp):
     # Decryption is done in the browser. Master key is never stored here.
-    return hub.read(fp)
+    return a85encode(hub.read(fp) or b'X').decode()
 
 @expose
 def write(fp, data):
-    return hub.write(fp, data)
+    return hub.write(fp, a85decode(data))
 
 @app.route("/")
 async def main():

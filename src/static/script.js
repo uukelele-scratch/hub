@@ -67,7 +67,26 @@ document.addEventListener('hy:connected', async()=>{
     });
     window.mde = mde;
 
-    mde.value("---\n## Loading notes...\n---")
+    mde.value("Loading notes...");
+
+
+    const encryptedData = await portal.read('vault.enc');
+    
+    let data = null;
+    if (encryptedData === '=9') {
+        // brand new, first time setup
+        data = {
+            conversations: [],
+            notes: [],
+        }
+        await portal.write('vault.enc', await encryptJSON(data));
+    } else {
+        data = await decryptJSON(encryptedData);
+    }
+
+    console.log(data);
+
+    mde.value(data.notes[0] || 'No notes found.');
 })
 
 $('#settingsForm').addEventListener('submit', async e=>{
