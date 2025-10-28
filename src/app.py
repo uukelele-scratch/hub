@@ -72,7 +72,7 @@ class Hub:
             [git, 'add', '.'],
             [git, 'commit', '-m', f'"sync-{datetime.now()}"'],
             [git, 'push']
-        ]: print(sp.run(cmd, capture_output=True, text=True, check=True).stdout)
+        ]: print(sp.run(cmd, cwd=repo_path, capture_output=True, text=True, check=True).stdout)
 
         return 'DONE'
 
