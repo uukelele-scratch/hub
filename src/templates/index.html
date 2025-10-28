@@ -16,14 +16,13 @@
 
 {% include "settings.html" %}
 
+<button save disabled>
+    {{ hy.icon("Save") }} Save
+</button>
+
 <div id="group">
     <div id="calendar"></div>
-    <div notes-container>
-        <textarea id="notes"></textarea>
-        <button save>
-            {{ hy.icon("Save") }} Save
-        </button>
-    </div>
+    <textarea id="notes"></textarea>
 </div>
 
 <div id="chat">
@@ -32,16 +31,16 @@
         <!--<small style="text-align: right;">
             Chat with an AI. Context of notes is provided.
         </small>-->
-        <fieldset role="group">
-            <form id="chatForm">
-                <input type="text" placeholder="Chat with AI">
-                <!--<select style="width:10rem;">
-                    <option>Example 1</option>
-                    <option>Example 2</option>
-                </select>-->
-                <button type="submit">{{ hy.icon("bot-message-square") }}</button>
-            </form>
-        </fieldset>
+        <form id="chatForm">
+            <fieldset role="group">
+                    <input type="text" placeholder="Chat with AI">
+                    <!--<select style="width:10rem;">
+                        <option>Example 1</option>
+                        <option>Example 2</option>
+                    </select>-->
+                    <button type="submit">{{ hy.icon("bot-message-square") }}</button>
+            </fieldset>
+        </form>
     </div>
 </div>
 

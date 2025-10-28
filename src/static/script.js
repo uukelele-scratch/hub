@@ -38,7 +38,7 @@ settingsBtn.addEventListener('click', async () => {
 });
 
 const verifyValue = (val, el) => {
-    if (val === null) { el.ariaInvalid = !Boolean(el.value); return; }
+    if (val === null) { el.ariaInvalid = !Boolean(el.value); if (el.ariaInvalid==="false"){el.ariaInvalid=null} return; }
     const regex = val instanceof RegExp ? val : new RegExp(val);
     el.ariaInvalid = !regex.test(el.value);
 };
@@ -62,17 +62,21 @@ document.addEventListener('hy:connected', async()=>{
         settingsBtn.click();
     }
 
-    if (!window.localStorage.getItem('master_password')) {
-        settingsBtn.click();
-    }
-
     $('#repo_url').value = settings.repo_url;
-    $('#master_password').value = atob(window.localStorage.getItem('master_password') || '');
+    $('#master_password').value = atob(window.masterPassword || '');
     $('#gh_token').value = settings.github_token;
 
     verifyValue('/', $('#repo_url'));
     verifyValue('^(gh[pousr]_|github_pat_)[A-Za-z0-9_]+$', $('#gh_token'));
     verifyValue(null, $('#master_password'));
+
+    if (!window.masterPassword) {
+        settingsBtn.click();
+        /* wait until saved ?? */
+        await new Promise((resolve, reject) => {
+            window.continuePassword = resolve;
+        });
+    }
 
     const mde = new EasyMDE({
         element: $('#notes'),
@@ -87,7 +91,7 @@ document.addEventListener('hy:connected', async()=>{
     const encryptedData = await portal.read('vault.enc');
     
     let data = null;
-    if (encryptedData === '=9') {
+    if (!encryptedData) {
         // brand new, first time setup
         data = {
             conversations: [],
@@ -99,7 +103,7 @@ document.addEventListener('hy:connected', async()=>{
             data = await decryptJSON(encryptedData);
         } catch (err) {
             mde.value("# DECRYPTION FAILED!\n\nCheck your master password in settings, then reload the page.");
-            console.error("Decryption failed:", e);
+            console.error("Decryption failed:", err);
             return;
         }
     }
@@ -121,16 +125,20 @@ document.addEventListener('hy:connected', async()=>{
         return data.notes.filter(note => note.timestamp.slice(0, 10) === targetDateStr);
     }
 
-    const saveVault = debounce(async () => {
-        console.log("saving...");
+    const saveVaultAsync = async () => {
+        console.log('saving...');
         try {
             const encryptedData = await encryptJSON(data);
             await portal.write('vault.enc', encryptedData);
             calendar.render();
+            return true;
         } catch (e) {
             console.error(e)
+            return false;
         }
-    })
+    }
+
+    const saveVault = debounce(saveVaultAsync);
 
     const calendar = new FullCalendar.Calendar($('#calendar'), {
         initialView: 'dayGridMonth',
@@ -171,13 +179,42 @@ document.addEventListener('hy:connected', async()=>{
 
     calendar.render();
 
-    $('button[save]').addEventListener('click', e => {
-        if (!window.selectedDate) return;
+    $('button[save]').addEventListener('click', async e => {
 
         e.target.ariaBusy = true;
+        e.target.disabled = true;
+
+        const res = await saveVaultAsync();
+
+        if (res) {
+            const og = e.target.innerHTML;
+            e.target.innerHTML = `<i data-lucide="check"> Saved!`;
+            window.lucide?.createIcons();
+            setTimeout(()=>{
+                e.target.innerHTML = og;
+            }, 2000)
+        } else {
+            e.target.innerHTML = `<i data-lucide="triangle-alert"> Error saving!`;
+            window.lucide?.createIcons();
+        }
+
+        e.target.ariaBusy = false;
+        // e.target.disabled = false;
+        // leave it disabled because ther is nothing to save
+        // re-enable it BELOW
+
+    });
+
+    function modifyData() { $('button[save]').disabled = false; }
+    // ^^^ called whenever the `data` object updates, so like updating a note or sending an AI message
+
+    mde.codemirror.on("change", (cm, changeObj) => {
+        if (!window.selectedDate) return;
 
         let note = getSelectedNote();
         const content = mde.value();
+
+        if (!changeObj.origin || changeObj.origin === "setValue") return;
 
         if (!note) {
             note = {
@@ -192,24 +229,27 @@ document.addEventListener('hy:connected', async()=>{
             note.content = content;
         }
 
-        saveVault();
-
-        e.target.ariaBusy = false;
-    });
-
-    mde.codemirror.on("change", () => {
-        // ... autosave?
+        modifyData();
     })
 
     marked.setOptions({
         breaks: true,
     })
 
+    const messageTemplate = `
+        <div
+            class="message {{ message.role }}"
+            data-id="{{ message.id }}" >
+            {{ DOMPurify.sanitize(marked.parse(escapeHTML(message.content | safe))) | safe }}
+        </div>
+    `
+    const messageContext = { marked, escapeHTML, DOMPurify };
+
     $('#messages').innerHTML = nunjucks.renderString(`
         {% for message in messages %}
-            <div class="message {{ message.role }}" data-id="{{ message.id }}">{{ DOMPurify.sanitize(marked.parse(escapeHTML(message.content | safe))) | safe }}</div>
+            ${messageTemplate}
         {% endfor %} 
-    `, { messages: data.conversations, marked, escapeHTML, DOMPurify });
+    `, { messages: data.conversations, ...messageContext });
     $('#messages').scrollTop = $('#messages').scrollHeight;
 
     $('#chatForm').addEventListener('submit', async e => {
@@ -218,15 +258,37 @@ document.addEventListener('hy:connected', async()=>{
         if (!$('#chatForm input').value) return;
 
         e.submitter.ariaBusy = true;
+        e.submitter.disabled = true;
 
-        data.conversations.push({
+        const userMessage = {
             role: 'user',
             content: $('#chatForm input').value,
             id: crypto.randomUUID(),
             sources: [],
-        })
+        };
+
+        $('#chatForm input').value = null;
+
+        data.conversations.push(userMessage);
+
+        $('#messages').innerHTML += nunjucks.renderString(messageTemplate, { message: userMessage, ...messageContext });
+        $('#messages').scrollTop = $('#messages').scrollHeight;
 
         const res = await portal.chat(data.conversations.map(msg => ({ role: msg.role, content: msg.content })));
+
+        data.conversations.push({
+            id: crypto.randomUUID(),
+            sources: [],
+            ...res
+        });
+
+        $('#messages').innerHTML += nunjucks.renderString(messageTemplate, { message: res, ...messageContext });
+        $('#messages').scrollTop = $('#messages').scrollHeight;
+
+        e.submitter.ariaBusy = false;
+        e.submitter.disabled = false;
+
+        modifyData();
         
     })
 })
@@ -240,7 +302,8 @@ $('#settingsForm').addEventListener('submit', async e => {
         repo_url: $('#repo_url').value,
         github_token: $('#gh_token').value,
     });
-    window.localStorage.setItem('master_password', btoa($('#master_password').value));
+    window.masterPassword = btoa($('#master_password').value);
+    window.continuePassword?.()
 
     e.submitter.ariaBusy = false;
     settingsBtn.click();

@@ -28,7 +28,7 @@ async function deriveKey(master_password, salt) {
 
 
 function retrieveMasterPassword() {
-  return atob(window.localStorage.getItem('master_password') || '') || null;
+  return atob(window.masterPassword || '') || null;
 }
 
 function a85encode(input) {

@@ -1,1 +1,3 @@
-hybridoma
+git+https://github.com/uukelele-scratch/hybridoma.git
+openai
+python-dotenv

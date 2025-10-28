@@ -5,6 +5,9 @@ import os
 import subprocess as sp
 from datetime import datetime
 from base64 import a85decode, a85encode
+from uuid import uuid4
+from openai import AsyncOpenAI as OpenAI
+from dotenv import load_dotenv; load_dotenv()
 
 app = App(__name__)
 
@@ -31,6 +34,10 @@ def inject_common_vars():
 
 git = os.environ.get("GIT_BINARY", "git")
 repo_path = os.environ.get("REPO_PATH", 'hub.data')
+ai_client = OpenAI(
+    api_key = os.getenv("OPENAI_API_KEY"),
+    base_url = os.getenv("OPENAI_BASE_URL")
+)
 
 class Hub:
     config = {}
@@ -70,7 +77,7 @@ class Hub:
 
         for cmd in [
             [git, 'add', '.'],
-            [git, 'commit', '-m', f'"sync-{datetime.now()}"'],
+            [git, 'commit', '-m', f'sync-{datetime.now()}'],
             [git, 'push']
         ]: print(sp.run(cmd, cwd=repo_path, capture_output=True, text=True, check=True).stdout)
 
@@ -92,11 +99,23 @@ def clone():
 @expose   
 def read(fp):
     # Decryption is done in the browser. Master key is never stored here.
-    return a85encode(hub.read(fp) or b'X').decode()
+    try: return a85encode(hub.read(fp)).decode()
+    except: return None
 
 @expose
 def write(fp, data):
     return hub.write(fp, a85decode(data))
+
+@expose
+async def chat(messages):
+    completion = await ai_client.chat.completions.create(
+        model = os.getenv("OPENAI_MODEL", 'gpt-4o-mini'),
+        messages = messages,
+    )
+    return {
+        'role': 'assistant',
+        'content': completion.choices[0].message.content,
+    }
 
 @app.route("/")
 async def main():
