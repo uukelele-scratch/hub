@@ -56,15 +56,15 @@ $('#master_password').addEventListener('input', e=>{
 })
 
 document.addEventListener('hy:connected', async()=>{
-    const settings = await portal.settings();
+    window.settings = await portal.settings();
 
     if (!settings) {
         settingsBtn.click();
     }
 
-    $('#repo_url').value = settings.repo_url;
+    $('#repo_url').value = settings.REPO_URL;
     $('#master_password').value = atob(window.masterPassword || '');
-    $('#gh_token').value = settings.github_token;
+    $('#gh_token').value = settings.GITHUB_TOKEN;
 
     verifyValue('/', $('#repo_url'));
     verifyValue('^(gh[pousr]_|github_pat_)[A-Za-z0-9_]+$', $('#gh_token'));
@@ -298,10 +298,18 @@ $('#settingsForm').addEventListener('submit', async e => {
 
     e.submitter.ariaBusy = true;
 
-    await portal.settings({
-        repo_url: $('#repo_url').value,
-        github_token: $('#gh_token').value,
-    });
+    const newSettings = {
+        REPO_URL: $('#repo_url').value,
+        GITHUB_TOKEN: $('#gh_token').value,
+    }
+
+    const keys = Object.keys(newSettings);
+
+    // Only update settings if they have changed.
+    if (keys.some(key => window.settings?.[key] !== newSettings[key])) {
+        await portal.settings(newSettings);
+    }
+
     window.masterPassword = btoa($('#master_password').value);
     window.continuePassword?.()
 

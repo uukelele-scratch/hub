@@ -1,0 +1,11 @@
+services:
+  hub:
+    build: .
+    ports:
+      - "8990:8990"
+    volumes:
+      - ./hub.data:/app/hub.data
+      - ./.env:/app/.env
+    env_file:
+      - .env
+    restart: unless-stopped

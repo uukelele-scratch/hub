@@ -7,7 +7,7 @@ from datetime import datetime
 from base64 import a85decode, a85encode
 from uuid import uuid4
 from openai import AsyncOpenAI as OpenAI
-from dotenv import load_dotenv; load_dotenv()
+from dotenv import set_key, find_dotenv, load_dotenv
 
 app = App(__name__)
 
@@ -32,65 +32,83 @@ def inject_common_vars():
         meta_image = f"{host}/favicon.ico",
     )
 
-git = os.environ.get("GIT_BINARY", "git")
-repo_path = os.environ.get("REPO_PATH", 'hub.data')
-ai_client = OpenAI(
-    api_key = os.getenv("OPENAI_API_KEY"),
-    base_url = os.getenv("OPENAI_BASE_URL")
-)
+dotenv = find_dotenv()
+if not dotenv:
+    dotenv = '.env'
+    open(dotenv, 'w').close()
+
+load_dotenv()
 
 class Hub:
-    config = {}
+    config = os.environ
 
     def __init__(self):
-        try:
-            with open("config.json") as f:
-                self.config = json.load(f)
-        except FileNotFoundError:
-            print("[+] Created `config.json`")
-            with open("config.json", 'w') as f:
-                json.dump(self.config, f)
-                self.config = {}
+        self.dotenv = find_dotenv()
+        if not self.dotenv:
+            self.dotenv = '.env'
+            open(self.dotenv, 'w').close()
+        load_dotenv(self.dotenv)
+
+        self.git = self.config.get("GIT_BINARY", "git")
+        self.repo_path = self.config.get("REPO_PATH", 'hub.data')
+        self.ai_client = OpenAI(
+            api_key = self.config.get("OPENAI_API_KEY"),
+            base_url = self.config.get("OPENAI_BASE_URL"),
+        )
 
     def clone(self):
-        if os.path.exists(repo_path): return
+        if os.path.exists(self.repo_path): return
 
-        token = self.config["github_token"]
-        repo = self.config["repo_url"]
+        token = self.config.get("GITHUB_TOKEN")
+        repo = self.config.get("REPO_URL")
 
-        result = sp.run([git, "clone", f"https://{token}@github.com/{repo}.git", repo_path], capture_output=True, text=True, check=True)
+        result = sp.run([self.git, "clone", f"https://{token}@github.com/{repo}.git", self.repo_path], capture_output=True, text=True, check=True)
 
         return result.returncode == 0   
    
     def read(self, fp):
         self.clone()
         try:
-            with open(os.path.join(repo_path, fp), 'rb') as f:
+            with open(os.path.join(self.repo_path, fp), 'rb') as f:
                 return f.read()
         except FileNotFoundError:
-            open(os.path.join(repo_path, fp), 'x').close()
+            open(os.path.join(self.repo_path, fp), 'x').close()
         
     def write(self, fp, data):
         self.clone()
-        with open(os.path.join(repo_path, fp), 'wb') as f:
+        with open(os.path.join(self.repo_path, fp), 'wb') as f:
             f.write(data)
 
         for cmd in [
-            [git, 'add', '.'],
-            [git, 'commit', '-m', f'sync-{datetime.now()}'],
-            [git, 'push']
-        ]: print(sp.run(cmd, cwd=repo_path, capture_output=True, text=True, check=True).stdout)
-
-        return 'DONE'
+            [self.git, 'add', '.'],
+            [self.git, 'commit', '-m', f'sync-{datetime.now()}'],
+            [self.git, 'push']
+        ]: print(sp.run(cmd, cwd=self.repo_path, capture_output=True, text=True, check=True).stdout)
 
 hub = Hub()
 
 @expose
 def settings(new_settings = None):
-    if new_settings:
-        hub.config.update(new_settings)
+    safe = {
+        "OPENAI_API_KEY",
+        "OPENAI_BASE_URL",
+        "OPENAI_MODEL",
+
+        "GIT_BINARY",
+        "GITHUB_TOKEN",
+        "REPO_URL",
+        "REPO_PATH",
+    }
     
-    return hub.config
+    if new_settings:
+
+        new_settings = {k:v for k,v in new_settings.items() if k in safe}
+
+        hub.config.update(new_settings)
+        for k, v in new_settings.items():
+            set_key(hub.dotenv, k, str(v))
+    
+    return {k:v for k,v in hub.config.items() if k in safe}
 
 @expose
 def clone():
@@ -108,8 +126,8 @@ def write(fp, data):
 
 @expose
 async def chat(messages):
-    completion = await ai_client.chat.completions.create(
-        model = os.getenv("OPENAI_MODEL", 'gpt-4o-mini'),
+    completion = await hub.ai_client.chat.completions.create(
+        model = hub.config.get("OPENAI_MODEL", 'gpt-4o-mini'),
         messages = messages,
     )
     return {
