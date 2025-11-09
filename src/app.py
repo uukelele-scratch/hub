@@ -1,4 +1,4 @@
-from hybridoma import App, ViewModel, view_model, expose
+from hybridoma import App, portal
 from hybridoma.quart import request, redirect
 import json
 import os
@@ -87,7 +87,7 @@ class Hub:
 
 hub = Hub()
 
-@expose
+@portal.expose
 def settings(new_settings = None):
     safe = {
         "OPENAI_API_KEY",
@@ -110,29 +110,78 @@ def settings(new_settings = None):
     
     return {k:v for k,v in hub.config.items() if k in safe}
 
-@expose
+@portal.expose
 def clone():
     return hub.clone()
 
-@expose   
+@portal.expose   
 def read(fp):
     # Decryption is done in the browser. Master key is never stored here.
-    try: return a85encode(hub.read(fp)).decode()
+    try: return hub.read(fp)
     except: return None
 
-@expose
+@portal.expose
 def write(fp, data):
-    return hub.write(fp, a85decode(data))
+    return hub.write(fp, data)
 
-@expose
+@portal.expose
 async def chat(messages):
     completion = await hub.ai_client.chat.completions.create(
         model = hub.config.get("OPENAI_MODEL", 'gpt-4o-mini'),
         messages = messages,
+        stream=True,
+        tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_note",
+                    "description": "Retrieves the content of notes written on a specific day.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "day": {
+                                "type": "string",
+                                "description": "The 'day' parameter is a date in 'YYYY-MM-DD' format. If 'day' is not provided, it defaults to today's notes."
+                            },
+                        },
+                        "required": [],
+                    },
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_all_notes",
+                    "description": "Returns a list of dates (in 'YYYY-MM-DD' format) on which notes have been written.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "limit": {
+                                "type": "integer",
+                                "description": "The 'limit' parameter specifies the maximum number of recent dates to retrieve, counting backward from today. Default limit is 30.",
+                            },
+                        },
+                    },
+                }
+            },
+        ],
     )
+
+    text = ""
+    fx_calls = []
+    async for chunk in completion:
+        delta = chunk.choices[0].delta
+        if not delta: continue
+        if delta.content:
+            text += delta.content
+            await portal.chunk(delta.content)
+        if delta.tool_calls:
+            fx_calls.extend([{'name': fx.function.name, 'arguments': fx.function.arguments} for fx in delta.tool_calls])
+
     return {
         'role': 'assistant',
-        'content': completion.choices[0].message.content,
+        'content': text,
+        'fx_calls': fx_calls,
     }
 
 @app.route("/")

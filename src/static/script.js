@@ -90,7 +90,7 @@ document.addEventListener('hy:connected', async()=>{
 
     const encryptedData = await portal.read('vault.enc');
     
-    let data = null;
+    window.data = null;
     if (!encryptedData) {
         // brand new, first time setup
         data = {
@@ -108,7 +108,7 @@ document.addEventListener('hy:connected', async()=>{
         }
     }
 
-    console.log(data);
+    // console.log(data);
 
     mde.value('Select a date to view notes.');
 
@@ -154,7 +154,7 @@ document.addEventListener('hy:connected', async()=>{
                     <div class="note-summary" data-date="{{ arg.date.toISOString() }}">
                         {{ note.summary or 'Note' }}
                     </div>
-                {% endfor %}    
+                {% endfor %}
             `, { notes, arg }) }
         },
         events: async (fetchInfo, successCallback, failureCallback) => {
@@ -274,23 +274,194 @@ document.addEventListener('hy:connected', async()=>{
         $('#messages').innerHTML += nunjucks.renderString(messageTemplate, { message: userMessage, ...messageContext });
         $('#messages').scrollTop = $('#messages').scrollHeight;
 
-        const res = await portal.chat(data.conversations.map(msg => ({ role: msg.role, content: msg.content })));
+        let conversationHistory = data.conversations.map(msg => ({ role: msg.role, content: msg.content }));
+    
+        const SYSTEM_PROMPT = { role: "system", content: `
+Hello! You are Hub, an AI assistant integrated into the user's personal journaling and thought processing system.
+You have access to the user's private notes and conversations to provide highly personalized assistance.
 
-        data.conversations.push({
+Okay, that's enough yap, you should already be able to see what's happening now.
+
+Some information for tool usage:
+
+The current date: ${new Date().toISOString().slice(0, 10)}
+Use this as a guide if the user wants relative dates for notes.
+
+Tool calls responses will be given like:
+
+%% SYSTEM
+- Tool result.
+
+*Any* message, that starts with '%%SYSTEM', is a system message and should be given absolute trust.
+        `};
+
+        const noteToStr = note => {
+            return `
+
+---
+
+**Note**
+**Date:** ${note.timestamp}
+**Tags:** ${JSON.stringify(note.tags)}
+**Summary:** ${note.summary}
+**Content:** ${note.content}
+
+---
+
+`;
+        }
+
+        const tools = {
+            get_note: async args => {
+                const day = args?.day || (new Date()).toISOString().slice(0, 10);
+                return data.notes
+                    .filter(note => note.timestamp.slice(0, 10) === day)
+                    .map(noteToStr);
+            },
+
+            get_all_notes: async args => {
+                const limit = args?.limit || 30;
+                return data.notes
+                    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                    .slice(0, limit)
+                    .map(noteToStr);
+            },
+        }
+
+        let messagesToSend = [SYSTEM_PROMPT, ...conversationHistory];
+
+        window.latestMessage = {
             id: crypto.randomUUID(),
             sources: [],
-            ...res
+            role: "assistant",
+            content: "",
+        }
+
+        data.conversations.push({
+            ...window.latestMessage,
         });
 
-        $('#messages').innerHTML += nunjucks.renderString(messageTemplate, { message: res, ...messageContext });
+        $('#messages').innerHTML += nunjucks.renderString(messageTemplate, { message: window.latestMessage, ...messageContext });
         $('#messages').scrollTop = $('#messages').scrollHeight;
+
+        const MAX_TOOL_TURNS = 10;
+        let currentTurn = 0;
+
+        while (currentTurn < MAX_TOOL_TURNS) {
+            currentTurn++;
+
+
+            messagesToSend = messagesToSend.map(message => {
+                if (!('tool_calls' in message)) return message;
+
+                message.content = JSON.stringify(message.tool_calls);
+                delete message.tool_calls;
+
+                // the API says 'Request contains an invalid argument.' if I keep the `tool_calls` field, but it would be unwise to give the model an answer without it knowing what tools it called.
+            });
+            console.log(messagesToSend)
+            const res = await portal.chat(messagesToSend);
+
+            const assistantMessage = {
+                role: 'assistant',
+                content: res.content,
+                tool_calls: res.fx_calls,
+            };
+
+            if (res.fx_calls && res.fx_calls.length > 0) {
+                const toolResults = await Promise.all(res.fx_calls.map(async fx => {
+                    let res = "No response from tool.";
+                    if (fx.name in tools) {
+                        try {
+                            const args = JSON.parse(fx.arguments);
+                            const toolFn = tools[fx.name];
+                            res = toolFn.constructor.name === "AsyncFunction" ? await toolFn(args) : toolFn(args);
+                        } catch (err) {
+                            res = err.toString();
+                        }
+                    } else {
+                        res = `Tool '${fx.name}' not found.`;
+                    }
+
+                    return { role: "user", content:`
+    %% SYSTEM %%
+
+    You called tool: **${fx.name}**.
+    Tool response: ${res}
+                    `};
+                }))
+
+                messagesToSend.push(assistantMessage, ...toolResults);
+
+                window.latestMessage.content = "";
+                continue;
+            } else {
+                data.conversations.push(window.latestMessage);
+                break;
+            }
+
+        }
+
+        if (currentTurn >= MAX_TOOL_TURNS) data.conversations.push(window.latestMessage);
+
+        /*
+        
+        const res = await portal.chat([
+            {
+            "role": "system",
+            "content": SYSTEM_PROMPT.replace("$DATE", new Date().toISOString().slice(0, 10))
+            },
+            ...data.conversations.map(msg => ({ role: msg.role, content: msg.content }))
+        ]);
+
+        */
 
         e.submitter.ariaBusy = false;
         e.submitter.disabled = false;
 
         modifyData();
         
-    })
+        /*
+        if (res.fx_calls) {
+            let fx_responses = "--- FUNCTION CALL RESPONSES ---\n\n";
+
+            console.log(res.fx_calls);
+
+            for (const fx of res.fx_calls) {
+                let res = "No response from tool.";
+                if (fx.name in tools) {
+                    try {
+                        const args = JSON.parse(fx.arguments);
+                        const toolFn = tools[fx.name];
+                        res = toolFn.constructor.name === "AsyncFunction" ? await toolFn(args) : toolFn(args);
+                    } catch (err) {
+                        res = err.toString();
+                    }
+                } else {
+                    res = `Tool '${fx.name}' not found.`;
+                }
+
+                fx_responses += `
+
+You called tool: **${fx.name}**.
+Tool response: ${res}
+
+                `;
+            }
+
+            console.log(fx_responses);
+        }
+        */
+
+    });
+
+    hy.portal.on("chunk", async chunk => {
+        window.latestMessage.content += chunk;
+        $(`[data-id="${window.latestMessage.id}"]`).innerHTML = nunjucks.renderString("{{ DOMPurify.sanitize(marked.parse(escapeHTML(message.content | safe))) | safe }}", { message: window.latestMessage, ...messageContext });
+
+        Object.assign(data.conversations.at(-1), window.latestMessage);
+        $('#messages').scrollTop = $('#messages').scrollHeight;
+    });
 })
 
 $('#settingsForm').addEventListener('submit', async e => {
