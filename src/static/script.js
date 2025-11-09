@@ -358,6 +358,8 @@ Tool calls responses will be given like:
                 delete message.tool_calls;
 
                 // the API says 'Request contains an invalid argument.' if I keep the `tool_calls` field, but it would be unwise to give the model an answer without it knowing what tools it called.
+
+                return message
             });
             console.log(messagesToSend)
             const res = await portal.chat(messagesToSend);
