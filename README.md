@@ -12,7 +12,7 @@ Your data, in your control. Data is end-to-end encrypted - the password never le
 - Synchronization with a git repository.
 - AI chat integration
 - Markdown note-taking with calendar-based organization
-- Build with [hybridoma](https://github.com/uukelele-scratch/hybridoma)
+- Built with [hybridoma](https://github.com/uukelele-scratch/hybridoma)
 
 ## Installation
 
